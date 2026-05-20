@@ -1,8 +1,4 @@
-version: '3'
-
-volumes:
-  pg_data:
-  static:
+version: '3.8'
 
 services:
   db:
@@ -10,21 +6,31 @@ services:
     env_file: .env
     volumes:
       - pg_data:/var/lib/postgresql/data
+
   backend:
     build: ./backend/
     env_file: .env
+    depends_on:
+      - db
     volumes:
-      - static:/app/staticfiles/
-  frontend:
-    env_file: .env
-    build: ./frontend/
-    command: cp -r /app/build/. /static/
-    volumes:
-      - static:/static
+      # Связываем внутреннюю папку статики Django с общим волюмом
+      - static_value:/app/staticfiles/
+      # Связываем внутреннюю папку медиа Django с общим волюмом
+      - media_value:/app/media/
+
   gateway:
     build: ./nginx/
-    env_file: .env
     ports:
-      - 9000:80
+      - "9000:80"
+    depends_on:
+      - backend
     volumes:
-      - static:/static
+      # Передаем статику бэкенда в Nginx (путь совпадает с alias в nginx.conf)
+      - static_value:/var/html/staticfiles/
+      # Передаем медиа бэкенда в Nginx (путь совпадает с alias в nginx.conf)
+      - media_value:/var/html/media/
+
+volumes:
+  pg_data:
+  static_value:
+  media_value:
